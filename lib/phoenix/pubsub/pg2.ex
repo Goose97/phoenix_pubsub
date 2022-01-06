@@ -42,7 +42,11 @@ defmodule Phoenix.PubSub.PG2 do
 
   defp group(adapter_name) do
     groups = :persistent_term.get(adapter_name)
-    elem(groups, :erlang.phash2(self(), tuple_size(groups)))
+    # group_index = :erlang.phash2(self(), tuple_size(groups))
+
+    # Chỗ này viết để support các node chưa chuyển sang dùng PubSub mới
+    group_index = 0
+    elem(groups, group_index)
   end
 
   if Code.ensure_loaded?(:pg) do
@@ -72,6 +76,7 @@ defmodule Phoenix.PubSub.PG2 do
         :"#{adapter_name}_#{number}"
       end
 
+    groups = [name] ++ groups
     :persistent_term.put(adapter_name, List.to_tuple(groups))
 
     children =
@@ -89,7 +94,9 @@ defmodule Phoenix.PubSub.PG2Worker do
 
   @doc false
   def start_link({name, group}) do
-    GenServer.start_link(__MODULE__, {name, group}, name: group)
+    # Đoạn này viết thế này để tránh việc trùng tên GenServer với supervisor
+    gen_server_name = if name == group, do: Module.concat(name, Server), else: group
+    GenServer.start_link(__MODULE__, {name, group}, name: gen_server_name)
   end
 
   @impl true
