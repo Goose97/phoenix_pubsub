@@ -112,7 +112,15 @@ defmodule Phoenix.PubSub.PG2Worker do
   end
 
   @impl true
-  def handle_info(_, pubsub) do
+  # Message PubSub từ version cũ
+  def handle_info({:forward_to_local, _fastlane, _from, topic, message}, pubsub) do
+    Phoenix.PubSub.local_broadcast(pubsub, topic, message, Phoenix.PubSub)
+    {:noreply, pubsub}
+  end
+
+  @impl true
+  def handle_info(message, pubsub) do
+    IO.inspect(message, label: "UNCAUGHT BROADCAST MESSAGE")
     {:noreply, pubsub}
   end
 
