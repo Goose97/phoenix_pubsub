@@ -53,11 +53,24 @@ defmodule Phoenix.PubSub.PG2Server do
     {:noreply, state}
   end
 
+  # Message PubSub từ version mới
+  def handle_info({:forward_to_local, topic, msg, _dispatcher}, state) do
+    Local.broadcast(nil, state.name, state.pool_size, nil, topic, msg)
+    {:noreply, state}
+  end
+
+  def handle_info(message, state) do
+    IO.inspect(message, label: "UNCAUGHT BROADCAST MESSAGE")
+    {:noreply, state}
+  end
+
   defp get_members(server_name) do
     :pg2.get_members(pg2_namespace(server_name))
   end
   defp get_members(server_name, node_name) do
-    [{server_name, node_name}]
+    get_members(server_name)
+    |> Enum.filter(fn pid -> node(pid) == node_name end)
+    # [{server_name, node_name}]
   end
 
   defp pg2_namespace(server_name), do: {:phx, server_name}
