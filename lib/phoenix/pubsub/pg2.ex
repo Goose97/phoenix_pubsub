@@ -32,7 +32,13 @@ defmodule Phoenix.PubSub.PG2 do
 
   @impl true
   def direct_broadcast(adapter_name, node_name, topic, message, dispatcher) do
-    send({group(adapter_name), node_name}, {:forward_to_local, topic, message, dispatcher})
+    case pg_members(group(adapter_name)) do
+      {:error, {:no_such_group, _}} -> :ignore
+      pids ->
+        pid = Enum.find(pids, fn pid -> node(pid) == node_name end)
+        if pid, do: send(pid, {:forward_to_local, topic, message, dispatcher})
+    end
+    # send({group(adapter_name), node_name}, {:forward_to_local, topic, message, dispatcher})
     :ok
   end
 
