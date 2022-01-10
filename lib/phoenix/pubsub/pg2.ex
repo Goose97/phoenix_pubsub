@@ -48,10 +48,7 @@ defmodule Phoenix.PubSub.PG2 do
 
   defp group(adapter_name) do
     groups = :persistent_term.get(adapter_name)
-    # group_index = :erlang.phash2(self(), tuple_size(groups))
-
-    # Chỗ này viết để support các node chưa chuyển sang dùng PubSub mới
-    group_index = 0
+    group_index = :erlang.phash2(self(), tuple_size(groups))
     elem(groups, group_index)
   end
 
