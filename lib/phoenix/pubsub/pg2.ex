@@ -32,13 +32,7 @@ defmodule Phoenix.PubSub.PG2 do
 
   @impl true
   def direct_broadcast(adapter_name, node_name, topic, message, dispatcher) do
-    case pg_members(group(adapter_name)) do
-      {:error, {:no_such_group, _}} -> :ignore
-      pids ->
-        pid = Enum.find(pids, fn pid -> node(pid) == node_name end)
-        if pid, do: send(pid, {:forward_to_local, topic, message, dispatcher})
-    end
-    # send({group(adapter_name), node_name}, {:forward_to_local, topic, message, dispatcher})
+    send({group(adapter_name), node_name}, {:forward_to_local, topic, message, dispatcher})
     :ok
   end
 
@@ -48,6 +42,7 @@ defmodule Phoenix.PubSub.PG2 do
 
   defp group(adapter_name) do
     groups = :persistent_term.get(adapter_name)
+    groups = Tuple.to_list(groups) |> List.delete(PancakeV2.PubSub) |> List.to_tuple()
     group_index = :erlang.phash2(self(), tuple_size(groups))
     elem(groups, group_index)
   end
@@ -111,13 +106,6 @@ defmodule Phoenix.PubSub.PG2Worker do
   @impl true
   def handle_info({:forward_to_local, topic, message, dispatcher}, pubsub) do
     Phoenix.PubSub.local_broadcast(pubsub, topic, message, dispatcher)
-    {:noreply, pubsub}
-  end
-
-  @impl true
-  # Message PubSub từ version cũ
-  def handle_info({:forward_to_local, _fastlane, _from, topic, message}, pubsub) do
-    Phoenix.PubSub.local_broadcast(pubsub, topic, message, Phoenix.PubSub)
     {:noreply, pubsub}
   end
 
